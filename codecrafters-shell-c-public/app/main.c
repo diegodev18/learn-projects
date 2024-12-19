@@ -4,9 +4,33 @@
 #include <dirent.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
-void type_builtin(char *input, char **commands) {
+char *get_external_command(char *input, char *pathenv) {
+  char *pathdup = strndup(pathenv, strlen(pathenv));
+  char *delimit = ":";
+  char *token;
+  DIR *dir;
+  struct dirent *dp;
+  token = strtok(pathdup, delimit);
+
+  if (strlen(input) < 2) {
+    return NULL;
+  }
+
+  do {
+      char *temp_path = malloc(strlen(token) + strlen(input) + 2);
+      sprintf(temp_path, "%s/%s", token, input);
+      if (!access(temp_path, X_OK)) {
+        return temp_path;
+      }
+      free(temp_path);
+  } while ((token = strtok(NULL, delimit)));
+}
+
+void type_builtin(char *input, char **commands, char *pathenv) {
   char *used_input = input + 5;
+  char *external_command;
 
   for (int i = 0; commands[i]; i++) {
     if (!strcmp(used_input, commands[i])) {
@@ -14,25 +38,44 @@ void type_builtin(char *input, char **commands) {
       return;
     }
   }
-  char *pathenv = getenv("PATH");
-  char *delimit = ":";
-  char *token;
-  DIR *dir;
-  struct dirent *dp;
-  token = strtok(pathenv, delimit);
 
-  do {
-      char *temp_path = malloc(strlen(token) + strlen(used_input) + 2);
-      sprintf(temp_path, "%s/%s", token, used_input);
-      if (!access(temp_path, X_OK)) {
-        printf("%s is %s\n", used_input, temp_path);
-        free(temp_path);
-        return;
-      }
-      free(temp_path);
-  } while ((token = strtok(NULL, delimit)) != NULL);
+  if ((external_command = get_external_command(used_input, pathenv))) {
+    printf("%s is %s\n", used_input, external_command);
+    free(external_command);
+    return;
+  }
 
   printf("%s: not found\n", used_input);
+}
+
+bool execute_program(char *input, char *pathenv) {
+  char *inputdup = strndup(input, strlen(input));
+  char *only_put = strtok(inputdup, " ");
+  char *my_args[10];
+  my_args[0] = only_put;
+
+  int i = 1;
+  char *the_arg;
+  while ((the_arg = strtok(NULL, " ")) != NULL) {
+    my_args[i++] = the_arg;
+  }
+  my_args[i] = NULL;
+
+  char *program;
+  if ((program = get_external_command(only_put, pathenv))) {
+    pid_t pid = fork();
+    if (pid == 0) {
+      execv(program, my_args);
+      perror("execv failed");
+      exit(-1);
+    } else if (pid > 0) {
+      wait(NULL);
+    } else {
+      perror("fork failed");
+    }
+    return true;
+  }
+  return false;
 }
 
 int main(int argc, char **argv) {
@@ -42,7 +85,7 @@ int main(int argc, char **argv) {
   // Wait for user input
   char input[100];
   char *commands[] = {"exit", "echo", "type", NULL};
-  while (1) {
+  while (true) {
     printf("$ ");
     fgets(input, 100, stdin);
     input[strlen(input) - 1] = '\0';
@@ -61,7 +104,10 @@ int main(int argc, char **argv) {
       continue;
     }
     else if (!strncmp(input, commands[2], strlen(commands[2]))) { // type
-      type_builtin(input, commands);
+      type_builtin(input, commands, getenv("PATH"));
+      continue;
+    }
+    else if (execute_program(input, getenv("PATH"))) {
       continue;
     }
 
