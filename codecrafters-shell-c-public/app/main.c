@@ -144,12 +144,22 @@ char **separate(char *input) {
 
 bool execute_program(char *input, char *pathenv) {
   char *inputdup = strndup(input, strlen(input));
-  char *only_put = strtok(inputdup, " ");
-  char **my_args = separate(input + strlen(only_put) + 1);
+  int j = 1;
+  char *only_put;
+  if (input[0] == '\"') {
+    only_put = strtok(inputdup, "\"");
+    j++;
+  } else if (input[0] == '\'') {
+    only_put = strtok(inputdup, "'");
+    j++;
+  } else {
+    only_put = strtok(inputdup, " ");
+  }
+  char **my_args = separate(input + strlen(only_put) + j);
   char *new_args[10];
 
   new_args[0] = only_put;
-  int j = 1;
+  j = 1;
   for (int i = 0; my_args[i] != NULL; i++) {
     new_args[j++] = new_put(strndup(my_args[i], strlen(my_args[i])));
   }
@@ -173,24 +183,6 @@ bool execute_program(char *input, char *pathenv) {
   return false;
 }
 
-char *remove_spaces(char *input) {
-  char *new_input = malloc(strlen(input) + 1);
-  bool ex_space = false;
-  int j = 0;
-  for (int i = 0; input[i] != '\0'; i++) {
-    if (input[i] == ' ' && ex_space) {
-      continue;
-    } else if (input[i] == ' ' && !ex_space) {
-      ex_space = true;
-    } else if (input[i] != ' ') {
-      ex_space = false;
-    }
-    new_input[j++] = input[i];
-  }
-  new_input[j] = '\0';
-  return new_input;
-}
-
 int count_characters(char *input, char characther) {
   int counter = 0;
   for (int i = 0; input[i]; i++) {
@@ -201,56 +193,92 @@ int count_characters(char *input, char characther) {
   return counter;
 }
 
-char *check_backslashes(char *input, int count) {
-  char *new_put = malloc(strlen(input) + 1);
-
+char *new_put(char *input) {
+  char *new_input = malloc(strlen(input) + 1);
+  
+  bool quote = false;
+  bool double_quote = false;
   int j = 0;
   for (int i = 0; input[i] != '\0'; i++) {
-    if (input[i] == '\\' && input[i+1] == '\\' && count > 1) {
-      new_put[j++] = '\\';
-      i += 2;
-    } else if (input[i] == '\\' && input[i+1] == '\"' && count > 1) {
-      new_put[j++] = '\"';
-      i += 2;
+
+    if (input[i] == '\'') {
+      quote = true;
+      
+      while (true) {
+        i++;
+
+        if (input[i] == '\'' || input[i] == '\0') {
+          break;
+        }
+
+        new_input[j++] = input[i];
+        // printf("Quote: %c\n", input[i]);
+      }
     }
-    new_put[j++] = input[i];
-  }
-  new_put[j] = '\0';
-  return new_put;
-}
 
-char *new_put(char *input) {
-  char *copy_input = strndup(input, strlen(input));
-  int fin_char = strlen(copy_input) - 1;
-  int counted_backslashes = count_characters(copy_input, '\\');
+    else if (input[i] == '\"') {
+      double_quote = true;
 
-  // Aqui es el problema
-  
-  if (copy_input[0] == '\'' && copy_input[fin_char] == '\'') {
-    char *mall_put = malloc(strlen(input) + 1);
-    copy_input[fin_char] = '\0';
-    copy_input = copy_input + 1;
-    sprintf(mall_put, "%s", copy_input);
-    return mall_put;
-  } else if (copy_input[0] == '\"' && copy_input[fin_char] == '\"') { // Aqui estoy trabajando
-    char *without_spaces = remove_spaces(copy_input);
-    char *double_quote = malloc(strlen(without_spaces) + 1);
-    int j = 0;
-    for (int i = 0; without_spaces[i] != '\0'; i++) {
-      if (without_spaces[i] == '\"' && without_spaces[i-1] != '\\') {
+      while (true) {
+        i++;
+
+        if (input[i] == '\\' && input[i+1] == '\\') {
+          new_input[j++] = '\\';
+          i++;
+          continue;
+        }
+
+        else if (input[i] == '\\' && input[i+1] == '\"') { // Estoy trabajando aqui
+          new_input[j++] = '\"';
+          i++;
+          continue;
+        }
+
+        else if (input[i] == '\"' || input[i] == '\0') {
+          break;
+        }
+
+        new_input[j++] = input[i];
+        // printf("Double Quote: %c\n", input[i]);
+      }
+    }
+
+    else if (input[i] == ' ' && input[i-1] == ' ' && double_quote) {
+      continue;
+    }
+
+    else {
+      if (input[i] == '\\' && input[i+1] == ' ') {
         continue;
       }
-      double_quote[j++] = without_spaces[i];
+
+      else if (input[i] == '\\' && input[i+1] == '\\') {
+        new_input[j++] = '\\';
+        i++;
+        continue;
+      }
+
+      else if (input[i] == '\\' && input[i+1] == '\"') {
+        new_input[j++] = '\"';
+        i++;
+        continue;
+      }
+
+      else if (input[i] == '\\') {
+        continue;
+      }
+
+      else if (input[i] == ' ' && input[i-1] == ' ') {
+        continue;
+      }
+
+      new_input[j++] = input[i];
     }
-    double_quote[j] = '\0';
-    free(without_spaces);
-    char *final_put = check_backslashes(double_quote, counted_backslashes);
-    free(double_quote);
-    return final_put;
+
   }
+  new_input[j] = '\0';
   
-  char *new_put = check_backslashes(remove_spaces(copy_input), counted_backslashes);
-  return new_put;
+  return new_input;
 }
 
 void get_pwd() {
@@ -266,7 +294,6 @@ void cd(char *directory) {
     char *home = getenv("HOME");
     char *full_dir = malloc(strlen(home) + strlen(directory) + 1);
     sprintf(full_dir, "%s%s", home, directory + 1);
-    printf("%s\n", full_dir);
     if (chdir(full_dir) == 0) {
       free(full_dir);
       return;
