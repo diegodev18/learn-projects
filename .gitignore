@@ -2,3 +2,4 @@ codecrafters-shell-c/
 codecrafters-git-c/
 *.out
 */node_modules
+*/dist
