@@ -6,24 +6,24 @@ export default function server() {
         res.setHeader("Content-Type", "application/json");
 
         const { url, method } = req;
+        const { end: returnApi } = res;
         
         if (url === "/" && method === "GET") {
-            res.end(JSON.stringify({ mensage: "Bienvenido a la POKEAPI de DiegoDev18" }));
+            returnApi(JSON.stringify({ mensage: "Bienvenido a la POKEAPI de DiegoDev18" }));
             return;
         }
 
         const regex = /^\/(\w+)\/*$/;
         const validUrl = url?.match(regex);
         if (!validUrl) {
-            res.end(JSON.stringify({ mensage: `URL Invalido! Solo se requiere un parametro. Ejemplo: /pikachu` }));
+            returnApi(JSON.stringify({ mensage: `URL Invalido! Solo se requiere un parametro. Ejemplo: /pikachu` }));
             return;
         }
 
         const pokemon = pokemons.find(({ name }) => name.toLowerCase() === validUrl[1] );
-        const render = {
+        returnApi(JSON.stringify({
             mensage: pokemon ? "Found" : "Not found",
             pokemon: pokemon ?? {}
-        };
-        res.end(JSON.stringify(render));
+        }));
     })
 }
