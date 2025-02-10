@@ -19,7 +19,16 @@ export default function server() {
             return;
         }
 
-        const pokemon = pokemons.find(({ name }) => name.toLowerCase() === validUrl[1] );
+        const pokemon = pokemons.find(({ id, name, type }) => {
+            if (name.toLowerCase() === validUrl[1]) {
+                return true;
+            } else if (!isNaN(Number(validUrl[1])) && parseInt(validUrl[1]) === id) {
+                return true;
+            } else if (type.find(t => t === validUrl[1])) {
+                return true;
+            }
+            return false;
+        });
         res.end(JSON.stringify({
             mensage: pokemon ? "Found" : "Not found",
             pokemon: pokemon ?? {}
