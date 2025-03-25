@@ -1,5 +1,6 @@
 codecrafters-shell-c/
 codecrafters-git-c/
+codecrafters-http-server-c/
 *.out
 */node_modules
 */dist
