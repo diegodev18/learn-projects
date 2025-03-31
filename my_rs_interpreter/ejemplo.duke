@@ -1,4 +1,6 @@
 .. x 10 echo hola mundo
-.. return 0
+in que edad tienes? :
+out tienes {} anos
+return 0
 echo adios mundo
 echo adios

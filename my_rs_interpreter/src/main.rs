@@ -1,6 +1,7 @@
-use std::env::args;
-use std::fs;
-use std::process::exit;
+use std::{env::args, fs, process::exit};
+use std::io::{self, Write};
+
+static mut OUTPUT_OF_INPUT: String = String::new();
 
 fn sintax_error(error: String, index_line: i32) {
     eprintln!("Error -> {} in the {} LINE", error, index_line);
@@ -45,6 +46,25 @@ fn interpreter_line(index_line: i32, command: &str, args: Vec<&str>) {
                 }
             }
             exit(code);
+        },
+        "in" => {
+            print!("{}", args.join(" "));
+            io::stdout().flush().unwrap();
+            let mut get_input: String = String::new();
+            io::stdin().read_line(&mut get_input).unwrap();
+            unsafe { OUTPUT_OF_INPUT = get_input; }
+        },
+        "out" => {
+            let this_input: String;
+            unsafe { this_input = (OUTPUT_OF_INPUT.clone()).trim_end().to_string(); }
+            for arg in args {
+                if arg == "{}" {
+                    print!("{} ", this_input);
+                } else {
+                    print!("{} ", arg);
+                }
+            }
+            println!();
         },
         ".." => print!(""),
         _ => sintax_error(format!("COMMAND \'{}\' not exist", command), index_line)
