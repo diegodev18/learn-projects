@@ -1,6 +1,7 @@
 codecrafters-shell-c/
 codecrafters-git-c/
 codecrafters-http-server-c/
+codecrafters-kafka-javascript/
 target/
 *.out
 */node_modules
