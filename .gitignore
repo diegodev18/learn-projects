@@ -9,3 +9,5 @@ target/
 .DS_Store
 bin/
 obj/
+.angular/
+.angular/cache/
